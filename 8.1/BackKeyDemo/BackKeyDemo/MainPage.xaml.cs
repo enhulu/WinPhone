@@ -7,6 +7,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.Phone.UI.Input;
+using Windows.UI;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -35,6 +36,13 @@ namespace BackKeyDemo
             stateMachine.BackStack = _controlBackStack;
             
             this.DataContext = stateMachine;
+            Loaded += MainPage_Loaded;
+        }
+
+        void MainPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine("MainPage BackPressed added");
+            HardwareButtons.BackPressed += HardwareButtons_BackPressed;
         }
 
         /// <summary>
@@ -44,7 +52,7 @@ namespace BackKeyDemo
         /// This parameter is typically used to configure the page.</param>
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            HardwareButtons.BackPressed += HardwareButtons_BackPressed;
+
             stateMachine.BackStack.Push(stateMachine);
         }
 
@@ -57,10 +65,13 @@ namespace BackKeyDemo
 
         private void HardwareButtons_BackPressed(object sender, BackPressedEventArgs e)
         {
-
+            Debug.WriteLine("MainPage BackPressed triggered");
             if (!e.Handled && _controlBackStack != null && _controlBackStack.Count > 0)
             {
                 e.Handled = _controlBackStack.Peek().GoBack();
+            }
+            else { 
+                // <application specific> post processing when GoBack failed in the current control
             }
         }
          
@@ -83,6 +94,44 @@ namespace BackKeyDemo
         private void Button_Click_MinusTwo(object sender, RoutedEventArgs e)
         {
             stateMachine.Perform(Command.MinusTwo);
+        }
+
+        private void Option_Click_Reset(object sender, RoutedEventArgs e)
+        {
+            stateMachine.Perform(Command.Reset);
+        }
+
+        private void Option_Click_About(object sender, RoutedEventArgs e)
+        {
+            ShowAbout();
+        }
+
+        private async void ShowAbout() {
+            //first line
+            TextBlock line1 = new TextBlock();
+            line1.Text = "This app is to demo";
+            line1.FontSize = 17;
+            line1.Foreground = new SolidColorBrush(Colors.White);
+            line1.HorizontalAlignment = Windows.UI.Xaml.HorizontalAlignment.Center;
+
+            //second line
+            TextBlock line2 = new TextBlock();
+            line2.Text = "how back button impacts the UI flow.";
+            line2.FontSize = 17;
+            line2.Foreground = new SolidColorBrush(Colors.White);
+            line2.HorizontalAlignment = Windows.UI.Xaml.HorizontalAlignment.Center;
+            
+            StackPanel stack = new StackPanel();
+            stack.Children.Add(line1);
+            stack.Children.Add(line2);
+
+            ContentDialog dialog = new ContentDialog();
+            dialog.Content = stack;
+            SolidColorBrush color = new SolidColorBrush(Colors.Black);
+            color.Opacity = 0.8;
+            dialog.Background = color;
+            dialog.Margin = new Thickness(0, 250, 0, 0);
+            await dialog.ShowAsync();
         }
     }
 }

@@ -22,7 +22,8 @@ namespace BackKeyDemo
             PlusOne,
             PlusTwo,
             MinusOne,
-            MinusTwo
+            MinusTwo,
+            Reset
         }
 
         public class UIStateMachine : INotifyPropertyChanged, IBackable
@@ -52,6 +53,10 @@ namespace BackKeyDemo
 
             private Dictionary<StateTransition, UIState> _transitions;
             public UIState CurrentState { get; private set; }
+            public bool IsPlusOneEnabled { get; private set; }
+            public bool IsPlusTwoEnabled { get; private set; }
+            public bool IsMinusOneEnabled { get; private set; }
+            public bool IsMinusTwoEnabled { get; private set; }
 
             private Stack<UIState> _stateStack = new Stack<UIState>();
 
@@ -72,7 +77,7 @@ namespace BackKeyDemo
             public UIStateMachine()
             {
                 CurrentState = UIState.One;
-                NotifyPropertyChanged("CurrentState");
+                NotifyPropertyChanged("CurrentState");                
                 _transitions = new Dictionary<StateTransition, UIState>
                 {
                     // <application specific> defines possible transitions triggered by commands
@@ -86,22 +91,45 @@ namespace BackKeyDemo
                     { new StateTransition(UIState.Three, Command.PlusOne), UIState.Four },
                     { new StateTransition(UIState.Four, Command.MinusOne), UIState.Three },
                     { new StateTransition(UIState.Four, Command.MinusTwo), UIState.Two },
+                    { new StateTransition(UIState.One, Command.Reset), UIState.One },
+                    { new StateTransition(UIState.Two, Command.Reset), UIState.One },
+                    { new StateTransition(UIState.Three, Command.Reset), UIState.One },
+                    { new StateTransition(UIState.Four, Command.Reset), UIState.One },
                 };
+                UpdateProperties();
             }
 
             public void TransitTo(UIState nextState, bool isMovingBack = false)
             {
-                if (!isMovingBack && IsBackable(nextState)) {
-                    _stateStack.Push(CurrentState);
-                }
+
                 DoTransition(nextState);
                 CurrentState = nextState;
                 NotifyPropertyChanged("CurrentState");
+                UpdateProperties();
             }
 
             private void DoTransition(UIState nextState)
             {
                 // <application specific> render transition
+            }
+
+            private void UpdateProperties()
+            {
+                UIState temp;
+                StateTransition transition;
+
+                transition = new StateTransition(CurrentState, Command.MinusOne);
+                IsMinusOneEnabled = _transitions.TryGetValue(transition, out temp) ? true : false;
+                NotifyPropertyChanged("IsMinusOneEnabled");
+                transition = new StateTransition(CurrentState, Command.MinusTwo);
+                IsMinusTwoEnabled = _transitions.TryGetValue(transition, out temp) ? true : false;
+                NotifyPropertyChanged("IsMinusTwoEnabled");
+                transition = new StateTransition(CurrentState, Command.PlusOne);
+                IsPlusOneEnabled = _transitions.TryGetValue(transition, out temp) ? true : false;
+                NotifyPropertyChanged("IsPlusOneEnabled");
+                transition = new StateTransition(CurrentState, Command.PlusTwo);
+                IsPlusTwoEnabled = _transitions.TryGetValue(transition, out temp) ? true : false;
+                NotifyPropertyChanged("IsPlusTwoEnabled");
             }
 
             private bool IsBackable(UIState nextState)
@@ -123,16 +151,27 @@ namespace BackKeyDemo
                 }
             }
 
-
             public UIState Perform(Command command)
             {
-                UIState nextState;
-                nextState = NextState(command);
-                if (nextState!=CurrentState)
+                UIState nextState = NextState(command);
+                UpdateBackStack(command,nextState);
+                if (!CurrentState.Equals(nextState))
                 {
                     TransitTo(nextState);
                 }
                 return CurrentState;
+            }
+
+            private void UpdateBackStack(Command command, UIState nextState){
+                // <application specific> 
+                if (command.Equals(Command.Reset)){
+                    _stateStack.Clear();
+                    return;
+                }
+                if (IsBackable(nextState) && !CurrentState.Equals(nextState))
+                {
+                    _stateStack.Push(CurrentState);
+                }
             }
 
             public bool GoBack()
